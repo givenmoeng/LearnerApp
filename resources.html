@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learner Support System | Resources</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import { requireAuth, renderShell } from "./js/app.js";
+    import { initResources } from "./js/resources.js";
+    requireAuth("learner");
+    renderShell("resources");
+    initResources();
+  </script>
+</body>
+</html>
