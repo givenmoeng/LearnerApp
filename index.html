@@ -3,43 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learner Support System | Login</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>Learner Support System</title>
+  <script>location.replace("frontend/index.html");</script>
+  <meta http-equiv="refresh" content="0; url=frontend/index.html">
 </head>
-<body class="auth-page">
-  <main class="auth-shell">
-    <section class="auth-brand">
-      <div class="brand-mark">LS</div>
-      <h1>Learner Support System</h1>
-      <p>Manage learning tasks, support sessions, resources and progress in one place.</p>
-    </section>
-
-    <section class="auth-card">
-      <div class="tabs">
-        <button class="tab active" data-tab="login">Sign In</button>
-        <button class="tab" data-tab="register">Register</button>
-      </div>
-
-      <div id="message" class="message hidden"></div>
-
-      <form id="loginForm" class="auth-form">
-        <h2>Welcome back</h2>
-        <label>Email<input id="loginEmail" type="email" required autocomplete="email"></label>
-        <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
-        <button class="btn primary full" type="submit">Sign In</button>
-      </form>
-
-      <form id="registerForm" class="auth-form hidden">
-        <h2>Create learner account</h2>
-        <p class="muted">New accounts are created as Learners. Assessor accounts must be provisioned by an administrator.</p>
-        <label>Full name<input id="registerName" type="text" minlength="2" maxlength="100" required autocomplete="name"></label>
-        <label>Email<input id="registerEmail" type="email" required autocomplete="email"></label>
-        <label>Password<input id="registerPassword" type="password" minlength="6" required autocomplete="new-password"></label>
-        <label>Confirm password<input id="registerConfirm" type="password" minlength="6" required autocomplete="new-password"></label>
-        <button class="btn primary full" type="submit">Create Account</button>
-      </form>
-    </section>
-  </main>
-  <script type="module" src="js/auth.js"></script>
+<body>
+  <p>Opening the <a href="frontend/index.html">learner app</a>.</p>
 </body>
 </html>

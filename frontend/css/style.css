@@ -153,7 +153,23 @@ th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-sp
 .choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 520px; margin: auto; }
 .choice { padding: 14px; border: 1px solid var(--border); background: #fff; border-radius: 10px; font-weight: 700; }
 .choice:hover { background: #eff6ff; border-color: #93c5fd; }
-.notice { padding: 12px 14px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; color: #92400e; }
+.notice { padding: 12px 14px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; color: #92400e; margin-bottom: 18px; }
+.notice a { color: var(--primary-dark); font-weight: 700; text-decoration: underline; }
+.link-button {
+  border: 0; background: transparent; color: var(--primary-dark); font-weight: 700;
+  padding: 0; justify-self: start;
+}
+.dashboard-panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 18px; }
+.item-link, .item-button {
+  text-align: left; width: 100%; cursor: pointer;
+}
+.item-button.active { border-color: #93c5fd; background: #eff6ff; }
+.choice.correct { background: #dcfce7; border-color: #86efac; }
+.choice.wrong { background: #fee2e2; border-color: #fca5a5; }
+.choice:disabled { cursor: default; }
+.choice:disabled:hover { background: inherit; }
+.compact-note { min-height: 72px; }
+h4 { margin: 18px 0 8px; font-size: .95rem; }
 
 @media (max-width: 900px) {
   .auth-shell { grid-template-columns: 1fr; }
@@ -161,13 +177,13 @@ th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-sp
   .app-layout { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; }
   .nav { grid-template-columns: repeat(3, 1fr); }
-  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stats, .dashboard-panels { grid-template-columns: repeat(2, 1fr); }
   .resource-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 620px) {
   .content { padding: 18px; }
   .topbar { padding: 14px 18px; }
-  .toolbar, .form-grid, .stats, .resource-grid { grid-template-columns: 1fr; }
+  .toolbar, .form-grid, .stats, .resource-grid, .dashboard-panels { grid-template-columns: 1fr; }
   .nav { grid-template-columns: 1fr 1fr; }
   .choice-grid { grid-template-columns: 1fr; }
   .user-area .email { display: none; }

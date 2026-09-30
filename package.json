@@ -1,0 +1,10 @@
+{
+  "name": "learner-support-system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "npx --yes serve frontend",
+    "emulators": "npx --yes firebase-tools emulators:start --only auth,database --project demo-learnerapp",
+    "test:rules": "npx --yes firebase-tools emulators:exec --only auth,database --project demo-learnerapp \"node backend/tests/rules.test.mjs\""
+  }
+}

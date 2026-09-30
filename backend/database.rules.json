@@ -1,0 +1,188 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'assessor')",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name', 'email', 'role']) && ((!data.exists() && newData.child('role').val() === 'learner') || (data.exists() && newData.child('role').val() === data.child('role').val()))",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 100"
+        },
+        "email": {
+          ".validate": "newData.isString() && newData.val().length <= 150"
+        },
+        "role": {
+          ".validate": "newData.val() === 'learner' || newData.val() === 'assessor'"
+        }
+      }
+    },
+
+    "learnerIndex": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name', 'email'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 100"
+        },
+        "email": {
+          ".validate": "newData.isString() && newData.val().length <= 150"
+        }
+      }
+    },
+
+    "tasks": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'assessor')",
+        "$taskId": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'assessor' || (auth.uid === $uid && ((!data.exists() && newData.child('userId').val() === auth.uid) || (data.exists() && data.child('userId').val() === auth.uid && (!newData.exists() || newData.child('userId').val() === auth.uid)))))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['userId', 'title', 'description', 'category', 'priority', 'dueDate', 'status']) && newData.child('userId').val() === $uid)",
+          "userId": {
+            ".validate": "newData.val() === $uid"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 150"
+          },
+          "description": {
+            ".validate": "newData.isString() && newData.val().length <= 1000"
+          },
+          "category": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "priority": {
+            ".validate": "newData.val() === 'Low' || newData.val() === 'Medium' || newData.val() === 'High'"
+          },
+          "status": {
+            ".validate": "newData.val() === 'Pending' || newData.val() === 'In Progress' || newData.val() === 'Completed'"
+          },
+          "dueDate": {
+            ".validate": "newData.isString()"
+          },
+          "assignedBy": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "assignedByName": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 100)"
+          }
+        }
+      }
+    },
+
+    "bookings": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'assessor')",
+        "$bookingId": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'assessor' || (auth.uid === $uid && newData.exists() && newData.child('learnerId').val() === auth.uid && (newData.child('status').val() === 'Pending' || newData.child('status').val() === 'Cancelled') && (!data.exists() || data.child('learnerId').val() === auth.uid)))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['learnerId', 'topic', 'date', 'time', 'status']) && newData.child('learnerId').val() === $uid)",
+          "learnerId": {
+            ".validate": "newData.val() === $uid"
+          },
+          "topic": {
+            ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 150"
+          },
+          "date": {
+            ".validate": "newData.isString()"
+          },
+          "time": {
+            ".validate": "newData.isString()"
+          },
+          "status": {
+            ".validate": "newData.val() === 'Pending' || newData.val() === 'Approved' || newData.val() === 'Completed' || newData.val() === 'Cancelled'"
+          },
+          "description": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 1000)"
+          },
+          "notes": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2000)"
+          },
+          "meetingLink": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 1000)"
+          }
+        }
+      }
+    },
+
+    "assessorInbox": {
+      "bookings": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+        "$bookingId": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'assessor' || (newData.exists() && newData.child('learnerId').val() === auth.uid && (newData.child('status').val() === 'Pending' || newData.child('status').val() === 'Cancelled') && (!data.exists() || data.child('learnerId').val() === auth.uid)))",
+          ".validate": "!newData.exists() || newData.hasChildren(['learnerId', 'topic', 'date', 'time', 'status'])",
+          "topic": {
+            ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 150"
+          },
+          "date": {
+            ".validate": "newData.isString()"
+          },
+          "time": {
+            ".validate": "newData.isString()"
+          },
+          "status": {
+            ".validate": "newData.val() === 'Pending' || newData.val() === 'Approved' || newData.val() === 'Completed' || newData.val() === 'Cancelled'"
+          },
+          "description": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 1000)"
+          },
+          "notes": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 2000)"
+          },
+          "meetingLink": {
+            ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 1000)"
+          }
+        }
+      }
+    },
+
+    "resources": {
+      ".read": "auth != null",
+      "$resourceId": {
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'assessor'",
+        ".validate": "!newData.exists() || newData.hasChildren(['title', 'type', 'description', 'category', 'createdBy'])",
+        "title": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 150"
+        },
+        "type": {
+          ".validate": "newData.val() === 'Document' || newData.val() === 'Link' || newData.val() === 'Guide' || newData.val() === 'Video'"
+        },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length <= 1000"
+        },
+        "category": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "createdBy": {
+          ".validate": "newData.isString() && ((!data.exists() && newData.val() === auth.uid) || (data.exists() && newData.val() === data.val()))"
+        },
+        "url": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 1000)"
+        }
+      }
+    },
+
+    "gameScores": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'assessor')",
+        "$scoreId": {
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.child('learnerId').val() === auth.uid",
+          ".validate": "newData.hasChildren(['learnerId', 'score', 'game', 'createdAt']) && newData.child('learnerId').val() === $uid",
+          "learnerId": {
+            ".validate": "newData.val() === $uid"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "game": {
+            ".validate": "newData.isString() && newData.val().length <= 150"
+          }
+        }
+      }
+    }
+  }
+}

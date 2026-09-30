@@ -2,32 +2,51 @@ import { auth, db } from "./firebase.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  onAuthStateChanged
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {
-  ref, set, serverTimestamp
+  ref, get, update, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 import { showMessage } from "./app.js";
 
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
+const resetForm = document.getElementById("resetForm");
 const message = document.getElementById("message");
+let suppressAuthRedirect = false;
 
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    const login = tab.dataset.tab === "login";
-    loginForm.classList.toggle("hidden", !login);
-    registerForm.classList.toggle("hidden", login);
-    message.className = "message hidden";
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.tab === name);
   });
+  loginForm.classList.toggle("hidden", name !== "login");
+  registerForm.classList.toggle("hidden", name !== "register");
+  resetForm.classList.toggle("hidden", name !== "reset");
+  message.className = "message hidden";
+}
+
+document.querySelectorAll("[data-tab]").forEach(el => {
+  el.addEventListener("click", () => showTab(el.dataset.tab));
 });
 
-onAuthStateChanged(auth, user => {
-  if (user) {
-    // Existing authenticated users are sent to their dashboard after profile lookup.
-    // Avoid redirecting while a user is midway through account creation.
+async function redirectForUser(user) {
+  const snap = await get(ref(db, `users/${user.uid}`));
+  if (!snap.exists()) {
+    throw new Error("missing-profile");
+  }
+  window.location.replace(snap.val().role === "assessor" ? "assessor.html" : "dashboard.html");
+}
+
+onAuthStateChanged(auth, async user => {
+  if (!user || suppressAuthRedirect) return;
+
+  try {
+    await redirectForUser(user);
+  } catch (error) {
+    if (error.message === "missing-profile") return;
+    console.error("Signed-in redirect failed:", error);
   }
 });
 
@@ -40,8 +59,10 @@ loginForm.addEventListener("submit", async event => {
   let credential;
 
   try {
+    suppressAuthRedirect = true;
     credential = await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
+    suppressAuthRedirect = false;
     console.error("Firebase Authentication sign-in failed:", error);
 
     const text = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/invalid-email"].includes(error.code)
@@ -57,18 +78,14 @@ loginForm.addEventListener("submit", async event => {
   }
 
   try {
-    const { get } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js");
-    const snap = await get(ref(db, `users/${credential.user.uid}`));
-
-    if (!snap.exists()) {
-      showMessage(message, "You signed in, but your learner profile is missing from the database.", "error");
-      return;
-    }
-
-    window.location.href = snap.val().role === "assessor" ? "assessor.html" : "dashboard.html";
+    await redirectForUser(credential.user);
   } catch (error) {
+    suppressAuthRedirect = false;
     console.error("Signed in, but profile lookup failed:", error);
-    showMessage(message, `You signed in, but your profile could not be loaded${error.code ? ` (${error.code})` : ""}. Check the Realtime Database rules and connection.`, "error");
+    const text = error.message === "missing-profile"
+      ? "You signed in, but your learner profile is missing from the database."
+      : `You signed in, but your profile could not be loaded${error.code ? ` (${error.code})` : ""}. Check the Realtime Database rules and connection.`;
+    showMessage(message, text, "error");
   }
 });
 
@@ -92,15 +109,24 @@ registerForm.addEventListener("submit", async event => {
 
   try {
     showMessage(message, "Creating your account...", "info");
+    suppressAuthRedirect = true;
 
     const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = credential.user.uid;
 
     try {
-      await set(ref(db, `users/${credential.user.uid}`), {
-        name,
-        email,
-        role: "learner",
-        createdAt: serverTimestamp()
+      await update(ref(db), {
+        [`users/${uid}`]: {
+          name,
+          email,
+          role: "learner",
+          createdAt: serverTimestamp()
+        },
+        [`learnerIndex/${uid}`]: {
+          name,
+          email,
+          createdAt: serverTimestamp()
+        }
       });
     } catch (error) {
       console.error("Account created, but learner profile could not be saved:", error);
@@ -112,13 +138,20 @@ registerForm.addEventListener("submit", async event => {
       return;
     }
 
-    showMessage(message, "Account created. Redirecting...", "success");
-    window.location.href = "dashboard.html";
+    await signOut(auth);
+    suppressAuthRedirect = false;
+
+    document.getElementById("loginEmail").value = email;
+    document.getElementById("loginPassword").value = "";
+    registerForm.reset();
+    showTab("login");
+    showMessage(message, "Account created. Sign in with your email and password.", "success");
   } catch (error) {
+    suppressAuthRedirect = false;
     console.error(error);
 
     const text = error.code === "auth/email-already-in-use"
-      ? "This email address is already registered."
+      ? "This email is already registered. Sign in instead."
       : error.code === "auth/invalid-email"
       ? "Please enter a valid email address."
       : error.code === "auth/weak-password"
@@ -129,6 +162,30 @@ registerForm.addEventListener("submit", async event => {
       ? "Firebase Authentication is not configured for this project. Finish Authentication setup and enable Email/Password for the project configured in js/firebase.js."
       : `Registration failed${error.code ? ` (${error.code})` : ". Please try again."}`;
 
+    if (error.code === "auth/email-already-in-use") {
+      document.getElementById("loginEmail").value = email;
+      showTab("login");
+    }
+
+    showMessage(message, text, "error");
+  }
+});
+
+resetForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  const email = document.getElementById("resetEmail").value.trim().toLowerCase();
+
+  try {
+    showMessage(message, "Sending reset link...", "info");
+    await sendPasswordResetEmail(auth, email);
+    showMessage(message, "If that email is registered, a password reset link is on its way.", "success");
+  } catch (error) {
+    console.error(error);
+    const text = error.code === "auth/invalid-email"
+      ? "Please enter a valid email address."
+      : error.code === "auth/too-many-requests"
+      ? "Too many reset attempts. Please wait and try again."
+      : "Could not send a reset email. Check the address and try again.";
     showMessage(message, text, "error");
   }
 });

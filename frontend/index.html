@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learner Support System | Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-brand">
+      <div class="brand-mark">LS</div>
+      <h1>Learner Support System</h1>
+      <p>Manage learning tasks, support sessions, resources and progress in one place.</p>
+    </section>
+
+    <section class="auth-card">
+      <div class="tabs">
+        <button class="tab active" type="button" data-tab="register">Register</button>
+        <button class="tab" type="button" data-tab="login">Sign In</button>
+      </div>
+
+      <div id="message" class="message hidden"></div>
+
+      <form id="loginForm" class="auth-form hidden">
+        <h2>Welcome back</h2>
+        <label>Email<input id="loginEmail" type="email" required autocomplete="email"></label>
+        <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
+        <button class="btn primary full" type="submit">Sign In</button>
+        <button class="link-button" type="button" data-tab="reset">Forgot password?</button>
+      </form>
+
+      <form id="registerForm" class="auth-form">
+        <h2>Create learner account</h2>
+        <p class="muted">Register once with your email, then sign in. Assessor accounts are created by an administrator.</p>
+        <label>Full name<input id="registerName" type="text" minlength="2" maxlength="100" required autocomplete="name"></label>
+        <label>Email<input id="registerEmail" type="email" required autocomplete="email"></label>
+        <label>Password<input id="registerPassword" type="password" minlength="6" required autocomplete="new-password"></label>
+        <label>Confirm password<input id="registerConfirm" type="password" minlength="6" required autocomplete="new-password"></label>
+        <button class="btn primary full" type="submit">Create Account</button>
+      </form>
+
+      <form id="resetForm" class="auth-form hidden">
+        <h2>Reset password</h2>
+        <p class="muted">Enter the email on your account. We will send a reset link if it is registered.</p>
+        <label>Email<input id="resetEmail" type="email" required autocomplete="email"></label>
+        <button class="btn primary full" type="submit">Send reset link</button>
+        <button class="link-button" type="button" data-tab="login">Back to sign in</button>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

@@ -1,8 +1,15 @@
-import { auth, db } from "./firebase.js";
+import { db } from "./firebase.js";
 import {
   ref, push, set, update, remove, onValue, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
-import { escapeHTML, formatDate, showMessage } from "./app.js";
+import {
+  escapeHTML,
+  formatDate,
+  showMessage,
+  recordsFrom,
+  isTaskOverdue,
+  statusBadge
+} from "./app.js";
 
 let tasks = [];
 let editingId = null;
@@ -11,6 +18,7 @@ export function initTasks() {
   document.addEventListener("userReady", ({ detail }) => {
     const user = detail.user;
     const content = document.getElementById("pageContent");
+    const taskPath = `tasks/${user.uid}`;
 
     content.innerHTML = `
       <div class="page-header">
@@ -117,13 +125,13 @@ export function initTasks() {
 
       try {
         if (editingId) {
-          await update(ref(db, `tasks/${editingId}`), {
+          await update(ref(db, `${taskPath}/${editingId}`), {
             ...data,
             updatedAt: serverTimestamp()
           });
           showMessage(document.getElementById("taskMessage"), "Task updated successfully.", "success");
         } else {
-          const taskRef = push(ref(db, "tasks"));
+          const taskRef = push(ref(db, taskPath));
           await set(taskRef, {
             ...data,
             userId: user.uid,
@@ -139,11 +147,8 @@ export function initTasks() {
       }
     });
 
-    onValue(ref(db, "tasks"), snapshot => {
-      const data = snapshot.val() || {};
-      tasks = Object.entries(data)
-        .map(([id, task]) => ({ id, ...task }))
-        .filter(task => task.userId === user.uid);
+    onValue(ref(db, taskPath), snapshot => {
+      tasks = recordsFrom(snapshot);
       renderTasks();
     });
 
@@ -161,7 +166,7 @@ export function initTasks() {
       if (button.dataset.action === "delete") {
         if (!confirm(`Delete "${task.title}"? This action cannot be undone.`)) return;
         try {
-          await remove(ref(db, `tasks/${id}`));
+          await remove(ref(db, `${taskPath}/${id}`));
           showMessage(document.getElementById("taskMessage"), "Task deleted successfully.", "success");
         } catch (error) {
           console.error(error);
@@ -171,7 +176,7 @@ export function initTasks() {
 
       if (button.dataset.action === "toggle") {
         try {
-          await update(ref(db, `tasks/${id}`), {
+          await update(ref(db, `${taskPath}/${id}`), {
             status: task.status === "Completed" ? "Pending" : "Completed",
             updatedAt: serverTimestamp()
           });
@@ -199,21 +204,24 @@ function renderTasks() {
       && (!priority || task.priority === priority);
   });
 
-  list.innerHTML = filtered.length ? filtered.map(task => `
+  list.innerHTML = filtered.length ? filtered.map(task => {
+    const overdue = isTaskOverdue(task);
+    return `
     <article class="item">
       <div class="item-head">
         <div>
           <h3>${escapeHTML(task.title)}</h3>
           <p class="muted">${escapeHTML(task.description)}</p>
         </div>
-        <span class="badge ${task.status === "Completed" ? "success" : task.priority === "High" ? "danger" : "warning"}">
-          ${escapeHTML(task.status)}
+        <span class="badge ${overdue ? "danger" : statusBadge(task.status)}">
+          ${overdue ? "Overdue" : escapeHTML(task.status)}
         </span>
       </div>
       <div class="meta">
         <span>Category: ${escapeHTML(task.category)}</span>
         <span>Priority: ${escapeHTML(task.priority)}</span>
         <span>Due: ${formatDate(task.dueDate)}</span>
+        ${task.assignedByName ? `<span>Assigned by ${escapeHTML(task.assignedByName)}</span>` : ""}
       </div>
       <div class="actions">
         <button class="btn small success" data-action="toggle" data-id="${task.id}">
@@ -223,5 +231,6 @@ function renderTasks() {
         <button class="btn small danger" data-action="delete" data-id="${task.id}">Delete</button>
       </div>
     </article>
-  `).join("") : `<div class="empty">No matching tasks found.</div>`;
+  `;
+  }).join("") : `<div class="empty">No matching tasks found.</div>`;
 }

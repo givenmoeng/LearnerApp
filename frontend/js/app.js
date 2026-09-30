@@ -4,7 +4,7 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {
-  ref, get
+  ref, get, update, push, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 let currentProfile = null;
@@ -32,16 +32,66 @@ export function formatDate(value) {
   return d.toLocaleDateString();
 }
 
+export function recordsFrom(snapshot) {
+  const value = snapshot.val() || {};
+  return Object.entries(value).map(([id, item]) => ({ id, ...(item || {}) }));
+}
+
+export function todayISODate() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+export function isTaskOverdue(task, today = todayISODate()) {
+  if (!task || task.status === "Completed" || !task.dueDate) return false;
+  return task.dueDate < today;
+}
+
+export function statusBadge(status) {
+  if (status === "Completed" || status === "Approved") return "success";
+  if (status === "Cancelled" || status === "High") return "danger";
+  return "warning";
+}
+
+export function applyRoleNav(role) {
+  document.querySelectorAll("[data-nav-role]").forEach(link => {
+    link.classList.toggle("hidden", link.dataset.navRole !== role);
+  });
+}
+
+export function newKey(path) {
+  return push(ref(db, path)).key;
+}
+
+export async function writeBooking(learnerId, bookingId, payload) {
+  const data = { ...payload, learnerId, updatedAt: serverTimestamp() };
+  await update(ref(db), {
+    [`bookings/${learnerId}/${bookingId}`]: data,
+    [`assessorInbox/bookings/${bookingId}`]: data
+  });
+}
+
+export async function patchBooking(learnerId, bookingId, fields) {
+  const patch = { ...fields, updatedAt: serverTimestamp() };
+  const updates = {};
+  Object.entries(patch).forEach(([key, value]) => {
+    updates[`bookings/${learnerId}/${bookingId}/${key}`] = value;
+    updates[`assessorInbox/bookings/${bookingId}/${key}`] = value;
+  });
+  await update(ref(db), updates);
+}
+
 export function renderShell(active = "") {
   const app = document.getElementById("app");
   if (!app) return;
 
   const nav = [
-    ["dashboard.html", "Dashboard", "dashboard"],
-    ["tasks.html", "Tasks", "tasks"],
-    ["booking.html", "Support Booking", "booking"],
-    ["resources.html", "Resources & Game", "resources"],
-    ["assessor.html", "Assessor", "assessor"]
+    ["dashboard.html", "Dashboard", "dashboard", "learner"],
+    ["tasks.html", "Tasks", "tasks", "learner"],
+    ["booking.html", "Support Booking", "booking", "learner"],
+    ["resources.html", "Resources & Game", "resources", "learner"],
+    ["assessor.html", "Assessor", "assessor", "assessor"]
   ];
 
   app.innerHTML = `
@@ -50,8 +100,8 @@ export function renderShell(active = "") {
         <div class="sidebar-brand">Learner Support System</div>
         <div class="role" id="sideRole">Loading role...</div>
         <nav class="nav">
-          ${nav.map(([href, label, key]) =>
-            `<a class="${active === key ? "active" : ""}" data-role-link="${key}" href="${href}">${label}</a>`
+          ${nav.map(([href, label, key, role]) =>
+            `<a class="hidden ${active === key ? "active" : ""}" data-nav-role="${role}" data-role-link="${key}" href="${href}">${label}</a>`
           ).join("")}
         </nav>
       </aside>
@@ -102,6 +152,14 @@ export function requireAuth(requiredRole = null) {
       const roleEl = document.getElementById("sideRole");
       if (emailEl) emailEl.textContent = user.email || "";
       if (roleEl) roleEl.textContent = `Role: ${currentProfile.role}`;
+      applyRoleNav(currentProfile.role);
+
+      if (currentProfile.role === "learner") {
+        update(ref(db, `learnerIndex/${user.uid}`), {
+          name: currentProfile.name,
+          email: currentProfile.email || user.email || ""
+        }).catch(error => console.error("Could not refresh learner index:", error));
+      }
 
       document.dispatchEvent(new CustomEvent("userReady", {
         detail: { user, profile: currentProfile }
